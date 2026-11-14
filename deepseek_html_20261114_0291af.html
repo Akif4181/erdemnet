@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ErdemNet - Yerli ve Milli Arama Motoru</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    body {
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a0000 50%, #0a0a0a 100%);
+        min-height: 100vh; color: #fff; display: flex; flex-direction: column;
+        align-items: center; padding: 20px;
+    }
+    .header { text-align: center; margin-top: 40px; margin-bottom: 20px; }
+    .logo {
+        font-size: 3.5rem; font-weight: 900; letter-spacing: -2px;
+        background: linear-gradient(90deg, #E30A17 0%, #ffffff 50%, #E30A17 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text; text-shadow: 0 0 40px rgba(227, 10, 23, 0.3);
+        display: inline-block;
+    }
+    .logo span {
+        background: linear-gradient(90deg, #ffffff, #E30A17);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .tagline { color: #aaa; font-size: 0.95rem; margin-top: 5px; letter-spacing: 1px; }
+    .flag-bar { width: 80px; height: 4px; background: linear-gradient(90deg, #E30A17, #fff); margin: 12px auto; border-radius: 2px; }
+    .search-container { width: 100%; max-width: 750px; margin-top: 20px; }
+    .search-box {
+        display: flex; background: #1e1e1e; border: 2px solid #333;
+        border-radius: 50px; padding: 5px 5px 5px 25px; transition: all 0.3s;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .search-box:focus-within { border-color: #E30A17; box-shadow: 0 0 25px rgba(227, 10, 23, 0.4); }
+    .search-box input {
+        flex: 1; background: transparent; border: none; outline: none;
+        color: #fff; font-size: 1.1rem; padding: 12px 0;
+    }
+    .search-box input::placeholder { color: #666; }
+    .search-box button {
+        background: linear-gradient(135deg, #E30A17, #b00812); border: none;
+        color: #fff; padding: 12px 30px; border-radius: 50px; font-size: 1rem;
+        font-weight: 600; cursor: pointer; transition: all 0.3s;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .search-box button:hover { background: linear-gradient(135deg, #ff1a2a, #E30A17); transform: scale(1.03); }
+    .search-box button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .engines { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
+    .engine-btn {
+        background: #1a1a1a; border: 1px solid #333; color: #aaa;
+        padding: 8px 16px; border-radius: 20px; cursor: pointer;
+        font-size: 0.85rem; transition: 0.3s; white-space: nowrap;
+    }
+    .engine-btn:hover { border-color: #E30A17; color: #fff; }
+    .engine-btn.active { background: #E30A17; border-color: #E30A17; color: #fff; }
+    .engine-btn.special { border-color: #E30A17; color: #E30A17; }
+    .engine-btn.special.active { background: #E30A17; color: #fff; }
+    .sub-engines {
+        display: none; gap: 8px; margin-top: 10px; justify-content: center; flex-wrap: wrap;
+    }
+    .sub-engines.show { display: flex; }
+    .sub-btn {
+        background: #0a0a0a; border: 1px solid #444; color: #ccc;
+        padding: 6px 14px; border-radius: 15px; cursor: pointer;
+        font-size: 0.8rem; transition: 0.3s;
+    }
+    .sub-btn:hover { border-color: #E30A17; color: #fff; }
+    .sub-btn.active { background: #E30A17; border-color: #E30A17; color: #fff; }
+    .results { width: 100%; max-width: 750px; margin-top: 30px; padding-bottom: 50px; }
+    .result-item {
+        background: #141414; border: 1px solid #222; border-radius: 12px;
+        padding: 18px 22px; margin-bottom: 15px; transition: all 0.3s;
+        animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .result-item:hover { border-color: #E30A17; background: #1a0a0a; transform: translateX(4px); }
+    .result-item a.title {
+        color: #6ea8ff; font-size: 1.15rem; font-weight: 600;
+        text-decoration: none; display: block; margin-bottom: 6px;
+    }
+    .result-item a.title:hover { text-decoration: underline; }
+    .result-item .url { color: #4caf50; font-size: 0.82rem; margin-bottom: 8px; word-break: break-all; }
+    .result-item .snippet { color: #bbb; font-size: 0.92rem; line-height: 1.55; }
+    .status { text-align: center; color: #888; padding: 20px; font-size: 0.9rem; }
+    .loader {
+        display: inline-block; width: 20px; height: 20px;
+        border: 3px solid rgba(227, 10, 23, 0.3); border-top-color: #E30A17;
+        border-radius: 50%; animation: spin 0.8s linear infinite;
+        vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .footer { margin-top: auto; padding: 20px; color: #555; font-size: 0.8rem; text-align: center; }
+    .footer .heart { color: #E30A17; }
+    .special-info {
+        max-width: 750px; width: 100%; margin-top: 10px;
+        background: rgba(227, 10, 23, 0.08); border-left: 3px solid #E30A17;
+        padding: 10px 15px; border-radius: 5px; font-size: 0.78rem; color: #999;
+        display: none;
+    }
+    .special-info.show { display: block; }
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">Erdem<span>Net</span></div>
+        <div class="flag-bar"></div>
+        <div class="tagline">YERLİ VE MİLLİ ARAMA MOTORU 🇹🇷</div>
+    </div>
+
+    <div class="search-container">
+        <form class="search-box" id="searchForm">
+            <input type="text" id="query" placeholder="Türkiye'de ara..." autocomplete="off" autofocus>
+            <button type="submit" id="searchBtn"><span>🔍</span> Ara</button>
+        </form>
+
+        <div class="engines">
+            <button type="button" class="engine-btn special active" data-engine="erdemnet">🇹🇷 ErdemNet Özel</button>
+            <button type="button" class="engine-btn" data-engine="youtube">▶️ YouTube</button>
+            <button type="button" class="engine-btn" data-engine="instagram">📸 Instagram</button>
+            <button type="button" class="engine-btn" data-engine="twitter">🐦 Twitter (X)</button>
+            <button type="button" class="engine-btn" data-engine="facebook">📘 Facebook</button>
+            <button type="button" class="engine-btn" data-engine="wiki">📚 Wikipedia</button>
+            <button type="button" class="engine-btn" data-engine="github">🐙 GitHub</button>
+        </div>
+
+        <div class="sub-engines show" id="subEngines">
+            <button type="button" class="sub-btn active" data-sub="google">🔍 Google</button>
+            <button type="button" class="sub-btn" data-sub="yandex">🟡 Yandex</button>
+        </div>
+
+        <div class="special-info" id="specialInfo">
+            ℹ️ ErdemNet Özel, Google veya Yandex altyapısını kullanır. Altta istediğin motoru seç.
+        </div>
+    </div>
+
+    <div class="results" id="results">
+        <div class="status">Aramaya başlamak için yukarıya bir şey yazın. 🚀</div>
+    </div>
+
+    <div class="footer">
+        ErdemNet © 2025 — <span class="heart">❤</span> ile Türkiye'de geliştirildi
+    </div>
+
+<script>
+    let currentEngine = 'erdemnet';
+    let currentSub = 'google';
+
+    const form = document.getElementById('searchForm');
+    const queryInput = document.getElementById('query');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultsDiv = document.getElementById('results');
+    const subEngines = document.getElementById('subEngines');
+    const specialInfo = document.getElementById('specialInfo');
+
+    // Ana motor seçimi
+    document.querySelectorAll('.engine-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.engine-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentEngine = btn.dataset.engine;
+
+            // ErdemNet Özel seçildiyse alt motorları göster
+            if (currentEngine === 'erdemnet') {
+                subEngines.classList.add('show');
+                specialInfo.classList.add('show');
+                queryInput.placeholder = 'Google veya Yandex ile ara...';
+            } else {
+                subEngines.classList.remove('show');
+                specialInfo.classList.remove('show');
+                queryInput.placeholder = {
+                    youtube: 'YouTube\'da ara...',
+                    instagram: 'Instagram\'da ara...',
+                    twitter: 'Twitter (X)\'te ara...',
+                    facebook: 'Facebook\'ta ara...',
+                    wiki: 'Wikipedia\'da ara...',
+                    github: 'GitHub\'da ara...'
+                }[currentEngine] || 'Ara...';
+            }
+
+            if (queryInput.value.trim()) form.dispatchEvent(new Event('submit'));
+        });
+    });
+
+    // Alt motor seçimi (Google / Yandex)
+    document.querySelectorAll('.sub-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentSub = btn.dataset.sub;
+            if (queryInput.value.trim()) form.dispatchEvent(new Event('submit'));
+        });
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const q = queryInput.value.trim();
+        if (!q) return;
+
+        // ErdemNet Özel → Google/Yandex'e yönlendir
+        if (currentEngine === 'erdemnet') {
+            const url = currentSub === 'google'
+                ? `https://www.google.com/search?q=${encodeURIComponent(q)}&hl=tr`
+                : `https://yandex.com.tr/search/?text=${encodeURIComponent(q)}`;
+            window.open(url, '_blank');
+            resultsDiv.innerHTML = `<div class="status" style="color:#4caf50;">
+                ✅ ${currentSub === 'google' ? 'Google' : 'Yandex'}'de yeni sekmede açıldı kanka!
+            </div>`;
+            return;
+        }
+
+        searchBtn.disabled = true;
+        resultsDiv.innerHTML = `<div class="status"><span class="loader"></span> ErdemNet arıyor...</div>`;
+
+        try {
+            let results = [];
+            if (currentEngine === 'youtube') results = await searchYouTube(q);
+            else if (currentEngine === 'instagram') results = await searchInstagram(q);
+            else if (currentEngine === 'twitter') results = await searchTwitter(q);
+            else if (currentEngine === 'facebook') results = await searchFacebook(q);
+            else if (currentEngine === 'wiki') results = await searchWiki(q);
+            else if (currentEngine === 'github') results = await searchGitHub(q);
+
+            if (results.length === 0) {
+                resultsDiv.innerHTML = `<div class="status">😕 "${escapeHtml(q)}" için sonuç bulunamadı. (Bu platform API kısıtlaması olabilir)</div>`;
+                return;
+            }
+
+            let html = `<div class="status" style="text-align:left; padding:0 0 15px 0;">
+                <strong style="color:#E30A17;">${results.length}</strong> sonuç — ${engineName(currentEngine)}
+            </div>`;
+
+            results.forEach(r => {
+                html += `
+                    <div class="result-item">
+                        <a class="title" href="${escapeHtml(r.link)}" target="_blank" rel="noopener noreferrer">
+                            ${escapeHtml(r.title)}
+                        </a>
+                        <div class="url">${escapeHtml(r.url || r.link)}</div>
+                        <div class="snippet">${escapeHtml(r.snippet || '')}</div>
+                    </div>`;
+            });
+            resultsDiv.innerHTML = html;
+        } catch (err) {
+            resultsDiv.innerHTML = `<div class="status" style="color:#E30A17;">❌ Hata: ${escapeHtml(err.message)}</div>`;
+        } finally {
+            searchBtn.disabled = false;
+        }
+    });
+
+    function engineName(e) {
+        return {
+            erdemnet: 'ErdemNet Özel', youtube: 'YouTube', instagram: 'Instagram',
+            twitter: 'Twitter (X)', facebook: 'Facebook', wiki: 'Wikipedia', github: 'GitHub'
+        }[e];
+    }
+
+    // ---- YouTube (direkt site aramasına yönlendir) ----
+    async function searchYouTube(q) {
+        return [{
+            title: `YouTube'da "${q}" ara`,
+            link: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
+            url: `youtube.com › results`,
+            snippet: `YouTube'un kendi arama sayfasında "${q}" sonuçlarını görmek için tıkla.`
+        }, {
+            title: `YouTube Kanal: ${q}`,
+            link: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAg%253D%253D`,
+            url: `youtube.com › channels`,
+            snippet: `"${q}" ile ilgili YouTube kanallarını görüntüle.`
+        }];
+    }
+
+    // ---- Instagram ----
+    async function searchInstagram(q) {
+        return [{
+            title: `Instagram'da "${q}" ara`,
+            link: `https://www.instagram.com/explore/tags/${encodeURIComponent(q.replace(/\s+/g, ''))}/`,
+            url: `instagram.com › explore › ${q}`,
+            snippet: `Instagram'da "${q}" etiketine göz at. (Giriş gerekebilir)`
+        }, {
+            title: `Instagram Kullanıcı: @${q.replace(/\s+/g, '')}`,
+            link: `https://www.instagram.com/${encodeURIComponent(q.replace(/\s+/g, ''))}/`,
+            url: `instagram.com › ${q}`,
+            snippet: `"${q}" ile ilgili Instagram profili.`
+        }];
+    }
+
+    // ---- Twitter (X) ----
+    async function searchTwitter(q) {
+        return [{
+            title: `Twitter (X)'te "${q}" ara`,
+            link: `https://twitter.com/search?q=${encodeURIComponent(q)}&f=live`,
+            url: `twitter.com › search`,
+            snippet: `Twitter'da "${q}" ile ilgili canlı gönderileri gör.`
+        }, {
+            title: `Twitter Hashtag: #${q.replace(/\s+/g, '')}`,
+            link: `https://twitter.com/hashtag/${encodeURIComponent(q.replace(/\s+/g, ''))}`,
+            url: `twitter.com › hashtag`,
+            snippet: `#${q.replace(/\s+/g, '')} hashtag'ini keşfet.`
+        }];
+    }
+
+    // ---- Facebook ----
+    async function searchFacebook(q) {
+        return [{
+            title: `Facebook'ta "${q}" ara`,
+            link: `https://www.facebook.com/search/top?q=${encodeURIComponent(q)}`,
+            url: `facebook.com › search`,
+            snippet: `Facebook'ta "${q}" ile ilgili kişi, sayfa ve gönderileri ara. (Giriş gerekebilir)`
+        }, {
+            title: `Facebook Sayfa: ${q}`,
+            link: `https://www.facebook.com/search/pages?q=${encodeURIComponent(q)}`,
+            url: `facebook.com › pages`,
+            snippet: `"${q}" ile ilgili Facebook sayfalarını gör.`
+        }];
+    }
+
+    // ---- Wikipedia TR ----
+    async function searchWiki(q) {
+        const url = `https://tr.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*&srlimit=10`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const items = data.query?.search || [];
+        return items.map(it => ({
+            title: it.title,
+            link: `https://tr.wikipedia.org/wiki/${encodeURIComponent(it.title.replace(/ /g, '_'))}`,
+            url: `tr.wikipedia.org › ${it.title}`,
+            snippet: it.snippet.replace(/<[^>]+>/g, '')
+        }));
+    }
+
+    // ---- GitHub ----
+    async function searchGitHub(q) {
+        const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&per_page=10`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const items = data.items || [];
+        return items.map(it => ({
+            title: it.full_name,
+            link: it.html_url,
+            url: `github.com › ${it.full_name}`,
+            snippet: (it.description || 'Açıklama yok') + ` ⭐ ${it.stargazers_count}`
+        }));
+    }
+
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+</script>
+</body>
+</html>
